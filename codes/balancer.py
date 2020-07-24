@@ -9,8 +9,6 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from parse import compile
-
 import balancer
 
 class Test():
@@ -182,7 +180,7 @@ class UI_Window(object):
         self.mainWindow.setCurrentIndex(self.status)
 
     def checkArrowStatus(func):
-        def wrapper(self):
+        def wrapper(self, game):
             func(self)
 
             self.leftButton.setDisabled(True)
@@ -338,6 +336,7 @@ class UI_Window(object):
                 "}")
         self.variableMenu.setObjectName("variableMenu")
 
+        # Upper FirstMenu        
         self.firstMenu = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
@@ -351,6 +350,8 @@ class UI_Window(object):
         self.horizontalLayout.addItem(spacerItem)
         self.variableMenu.addWidget(self.firstMenu)
 
+
+        # Upper SecondMenu
         self.secondMenu = QtWidgets.QWidget()
         self.secondMenu.setObjectName("secondMenu")
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout(self.secondMenu)
@@ -407,9 +408,15 @@ class UI_Window(object):
         self.randomTeamButton.setIconSize(QtCore.QSize(32, 32))
         self.randomTeamButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.randomTeamButton.setObjectName("randomTeamButton")
+
+        self.addUserButton.setText("인원추가")
+        self.mmrBalancingButton.setText("MMR밸런싱")
+        self.randomTeamButton.setText("랜덤팀구성")
+
         self.horizontalLayout_5.addWidget(self.randomTeamButton)
         self.variableMenu.addWidget(self.secondMenu)
 
+        # Upper ThridMenu
         self.thirdMenu = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
@@ -451,6 +458,8 @@ class UI_Window(object):
         self.clipboradButton.raise_()
         self.line_3.raise_()
         self.randomTeamButton2.raise_()
+        self.clipboradButton.setText("클립보드복사")
+        self.randomTeamButton2.setText("랜덤팀구성")
         self.variableMenu.addWidget(self.thirdMenu)
         self.horizontalLayout_2.addWidget(self.variableMenu)
         self.verticalLayout.addWidget(self.fixedMenu)
@@ -586,6 +595,9 @@ class UI_Window(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.lineEdit.sizePolicy().hasHeightForWidth())
         self.lineEdit.setSizePolicy(sizePolicy)
+
+        self.lineEdit.setPlaceholderText("[여기에 텍스트 입력]")
+
         self.chatTextEditPlaceHolderHorizontalLayout.addWidget(self.lineEdit)
 
         self.enterButton = QtWidgets.QPushButton(self.chatTextEditPlaceHolder)
@@ -684,6 +696,11 @@ class UI_Window(object):
         self.ATeamTitleHorizontalLayout.addWidget(self.ATeamMMR)
         self.ATeamVerticalLayout.addWidget(self.ATeamTitle)
 
+        # Setting ATeam Text
+        self.ATeamLabel.setText("A팀")
+        self.ATeamUpgradeButton.setText("전력강화")
+        self.ATeamMMR.setText("추정 MMR")
+
         self.thirdPagHorizontalLayout.addWidget(self.ATeamPage)
 
         self.teamLine = QtWidgets.QFrame(self.thirdPage)
@@ -750,6 +767,11 @@ class UI_Window(object):
         self.BTeamTitleHorizontalLayout.addWidget(self.BTeamMMR)
         self.BTeamVerticalLayout.addWidget(self.BTeamTitle)
 
+        # Setting BTeam Text
+        self.BTeamLabel.setText("B팀")
+        self.BTeamUpgradeButton.setText("전력강화")
+        self.BTeamMMR.setText("추정 MMR")
+
         self.thirdPagHorizontalLayout.addWidget(self.BTeamPage)
 
         self.mainWindow.addWidget(self.thirdPage)
@@ -758,26 +780,10 @@ class UI_Window(object):
         self.verticalLayout.addWidget(self.mainWindow)
         self.gridLayout.addWidget(self.windowWidget, 0, 1, 1, 1)
 
-        self.retranslateUI(window)
         self.variableMenu.setCurrentIndex(2)
         self.mainWindow.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(window)
 
-    def retranslateUI(self, window):
-        _translate = QtCore.QCoreApplication.translate
-        window.setWindowTitle(_translate("window", "Form"))
-        self.addUserButton.setText(_translate("window", "인원추가"))
-        self.mmrBalancingButton.setText(_translate("window", "MMR밸런싱"))
-        self.randomTeamButton.setText(_translate("window", "랜덤팀구성"))
-        self.clipboradButton.setText(_translate("window", "클립보드복사"))
-        self.randomTeamButton2.setText(_translate("window", "랜덤팀구성"))
-        self.lineEdit.setPlaceholderText(_translate("window", "[여기에 텍스트 입력]"))
-        self.ATeamLabel.setText(_translate("window", "A팀"))
-        self.ATeamUpgradeButton.setText(_translate("window", "전력강화"))
-        self.ATeamMMR.setText(_translate("window", "추정 MMR"))
-        self.BTeamLabel.setText(_translate("window", "B팀"))
-        self.BTeamUpgradeButton.setText(_translate("window", "전력강화"))
-        self.BTeamMMR.setText(_translate("window", "추정 MMR"))
 
 
 if __name__ == "__main__":
