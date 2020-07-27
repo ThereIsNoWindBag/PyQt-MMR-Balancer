@@ -10,16 +10,21 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from parse import compile
 from random import shuffle
-import balancer
 
-class Test():
-    text = '''WindBag님이 방에 참가했습니다.
+import requests
+from bs4 import BeautifulSoup
+
+''''
+WindBag님이 방에 참가했습니다.
 크림빵맛있어님이 방에 참가했습니다.
 오민석1님이 방에 참가했습니다.
 배고파1님이 방에 참가했습니다.
 나 강림 단죄확정님이 방에 참가했습니다.
 마뫄유튜브트위치구독도네좋아요님이 방에 참가했습니다.
-좀비감자님이 방에 참가했습니다.'''
+좀비감자님이 방에 참가했습니다.
+Q는점점강해진다님이 방에 참가했습니다.
+DWG ShowMaker님이 방에 참가했습니다.
+'''
 
 class TeamUserBox(QtWidgets.QWidget):
     def __init__(self, parent):
@@ -76,6 +81,7 @@ class TeamUserBox(QtWidgets.QWidget):
 
         self.parent.layout().addWidget(self.placeHolder)
 
+
 class UI_Dialog(object):
     def setupUI(self, Dialog):
         self.dialog = Dialog
@@ -127,7 +133,8 @@ class UI_Dialog(object):
     def accept(self):
         self.dialog.userName = self.textEdit.text()
         self.dialog.accept()
-    
+
+
 class UserBox(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -156,6 +163,7 @@ class UserBox(QtWidgets.QWidget):
     
     def setUserName(self, text):
         self.label.setText(text)
+
 
 class UI_Window(object):
     def __init__(self):
@@ -253,6 +261,16 @@ class UI_Window(object):
             self.BTeamMemberVerticalLayout.addWidget(tmp)
 
         self.rightArrowClick()
+
+    def getMMR(self):
+        req =  requests.get("http://www.lolskill.net/summoner/KR/WindBag")
+
+        html = req.text
+
+        soup = BeautifulSoup(html, 'html.parser')
+        tiers = soup.select('.champion-skillscore')
+
+        print(tiers)
 
     def addUserClick(self):
         self.dialog = QtWidgets.QDialog()
@@ -430,6 +448,7 @@ class UI_Window(object):
         self.line_2.setObjectName("line_2")
         self.horizontalLayout_5.addWidget(self.line_2)
         self.mmrBalancingButton = QtWidgets.QToolButton(self.secondMenu)
+        self.mmrBalancingButton.clicked.connect(self.getMMR)
         self.mmrBalancingButton.setMinimumSize(QtCore.QSize(60, 60))
         font = QtGui.QFont()
         font.setPointSize(8)

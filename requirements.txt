@@ -1,8 +1,13 @@
 beautifulsoup4==4.9.1
 bs4==0.0.1
 certifi==2020.6.20
+chardet==3.0.4
+idna==2.10
 parse==1.15.0
 PyQt5==5.15.0
 PyQt5-sip==12.8.0
+requests==2.24.0
+selenium==3.141.0
 soupsieve==2.0.1
+urllib3==1.25.10
 wincertstore==0.2
