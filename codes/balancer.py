@@ -11,75 +11,53 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from parse import compile
 from random import shuffle
 
+from selenium import webdriver
+
 import requests
 from bs4 import BeautifulSoup
 
-''''
+import threading
+
+from time import sleep
+
+from itertools import combinations
+
+text = '''
 WindBag님이 방에 참가했습니다.
-크림빵맛있어님이 방에 참가했습니다.
+아쿠o님이 방에 참가했습니다.
 오민석1님이 방에 참가했습니다.
-배고파1님이 방에 참가했습니다.
-나 강림 단죄확정님이 방에 참가했습니다.
-마뫄유튜브트위치구독도네좋아요님이 방에 참가했습니다.
+시라이 쿠로코lv4님이 방에 참가했습니다.
+아라비아 황제님님이 방에 참가했습니다.
+19조소영님이 방에 참가했습니다.
 좀비감자님이 방에 참가했습니다.
 Q는점점강해진다님이 방에 참가했습니다.
 DWG ShowMaker님이 방에 참가했습니다.
-'''
+Hide on bush님이 방에 참가했습니다.
+'''.strip()
 
-class TeamUserBox(QtWidgets.QWidget):
-    def __init__(self, parent):
-        super().__init__()
+class SeleniumThread(threading.Thread):
+    def __init__(self, user):
+        threading.Thread.__init__(self)
 
-        self.parent = parent
+        self.user = user
 
-        self.placeHolder = QtWidgets.QWidget(self.parent)
+    def run(self):
+        option = webdriver.chrome.options.Options()
+        driver = webdriver.Chrome("D:/Desktop/HanPy/PyQtMMRBalancer/driver/chromedriver.exe")
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.placeHolder.sizePolicy().hasHeightForWidth())
-        self.placeHolder.setSizePolicy(sizePolicy)
+        for i in range(10):
+            driver.get("http://www.lolskill.net/summoner/KR/" + self.user.name)
 
-        self.placeHolder.setStyleSheet(
-            "QWidget {"
-            "    padding-right : 20px;"
-            "}")
+            score = driver.find_element_by_class_name("champion-skillscore")
 
-        self.internalHorizontalLayout = QtWidgets.QHBoxLayout(self.placeHolder)
-        self.internalHorizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.internalHorizontalLayout.setSpacing(0)
+            if score.text == "":
+                sleep(10)
+            else:
+                print(score.text)
+                self.user.MMR = int(score.text.replace(',', ''))
+                break
 
-        self.pushButton = QtWidgets.QPushButton(self.placeHolder)
-
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Ignored)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy)
-
-        font = QtGui.QFont()
-        font.setFamily("나눔고딕")
-        font.setPointSize(15)
-        font.setBold(False)
-        font.setItalic(True)
-        font.setWeight(50)
-
-        self.pushButton.setFont(font)
-
-        self.pushButton.setStyleSheet(
-            "QWidget QWidget QPushButton {"
-            "    Text-align : left;\n"
-            "}")
-        
-        self.internalHorizontalLayout.addWidget(self.pushButton)
-
-        self.spacer = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.internalHorizontalLayout.addItem(self.spacer)
-
-        self.MMRLabel = QtWidgets.QLabel(self.placeHolder)
-        self.internalHorizontalLayout.addWidget(self.MMRLabel)
-
-        self.parent.layout().addWidget(self.placeHolder)
+        driver.close()
 
 
 class UI_Dialog(object):
@@ -136,8 +114,10 @@ class UI_Dialog(object):
 
 
 class UserBox(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, parent):
         super().__init__()
+
+        self.parent = parent
 
         # SizePolicy Setting
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -164,6 +144,73 @@ class UserBox(QtWidgets.QWidget):
     def setUserName(self, text):
         self.label.setText(text)
 
+    def mousePressEvent(self, QMouseEvent):
+        if QMouseEvent.button() == QtCore.Qt.RightButton:
+            self.parent.deleteUser(self.label.text())
+
+
+class TeamUserBox(QtWidgets.QWidget):
+    def __init__(self, parent):
+        super().__init__()
+
+        self.parent = parent
+
+        self.placeHolder = QtWidgets.QWidget(self.parent)
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.placeHolder.sizePolicy().hasHeightForWidth())
+        self.placeHolder.setSizePolicy(sizePolicy)
+
+        self.placeHolder.setStyleSheet(
+            "QWidget {"
+            "    padding-right : 20px;"
+            "}")
+
+        self.internalHorizontalLayout = QtWidgets.QHBoxLayout(self.placeHolder)
+        self.internalHorizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.internalHorizontalLayout.setSpacing(0)
+
+        self.pushButton = QtWidgets.QPushButton(self.placeHolder)
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Ignored)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy)
+
+        font = QtGui.QFont()
+        font.setFamily("나눔고딕")
+        font.setPointSize(15)
+        font.setBold(False)
+        font.setItalic(True)
+        font.setWeight(50)
+
+        self.pushButton.setFont(font)
+
+        self.pushButton.setStyleSheet(
+            "QWidget QWidget QPushButton {"
+            "    Text-align : left;\n"
+            "}")
+
+        self.internalHorizontalLayout.addWidget(self.pushButton)
+
+        self.spacer = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.internalHorizontalLayout.addItem(self.spacer)
+
+        self.MMRLabel = QtWidgets.QLabel(self.placeHolder)
+        self.internalHorizontalLayout.addWidget(self.MMRLabel)
+
+        self.parent.layout().addWidget(self.placeHolder)
+
+
+class User():
+    def __init__(self, name):
+        self.name = name
+        self.MMR = 0
+        self.UserBox = None
+        self.TeamUserBox = None
 
 class UI_Window(object):
     def __init__(self):
@@ -179,7 +226,7 @@ class UI_Window(object):
         self.tmpName = "asdf"
         self.userList = []
 
-        self.crawling_base_url = "https://www.op.gg/multi/query="
+        self.maxUserNum = 12
 
     def initSetting(self):
         self.leftButton.setDisabled(True)
@@ -225,14 +272,78 @@ class UI_Window(object):
 
     @checkArrowStatus
     def gameButtonClick(self, *args):
-
         self.gameType = args[0]
         window.setWindowTitle("TeamBalancer : {}".format(self.gameType))
 
         print(self.gameType)
+
+        if self.gameType == "League of Legends":
+            self.maxUserNum = 10
+        else:
+            self.maxUserNum = 12
+
         self.status += 1
         self.variableMenu.setCurrentIndex(1)
         self.mainWindow.setCurrentIndex(1)
+
+    def sendParsing(self):
+        # text = self.lineEdit.text().strip()
+
+        self.scrollAreaWidgetContent.setText(text)
+
+        val = text.split("\n")
+
+
+        p = compile("{}님이 방에 참가했습니다.")
+
+        for line in val:
+            result = p.parse(line)
+            self.addUser(result[0])
+
+    def addUserClick(self):
+        self.dialog = QtWidgets.QDialog()
+        tmp = UI_Dialog()
+        tmp.setupUI(self.dialog)
+        self.dialog.exec()
+
+        if self.dialog.result() == QtWidgets.QDialog.Accepted:
+            self.addUser(self.dialog.userName)
+
+    def addUser(self, name):
+        if self.addUserButton.isEnabled():
+            user = User(name)
+
+            userBox = UserBox(self)
+            userBox.setUserName(name)
+
+            user.UserBox = userBox
+
+            self.userList.append(user)
+
+            self.userPageGridLayout.addWidget(userBox, self.userNum // 2, self.userNum % 2, 1, 1)
+
+            self.userNum += 1
+
+            if self.userNum >= self.maxUserNum:
+                self.addUserButton.setDisabled(True)
+
+    def deleteUser(self, name):
+        self.userNum -= 1
+
+        for i in range(len(self.userList)):
+            if self.userList[i].name == name:
+                index = i
+
+        self.userList[index].UserBox.setParent(None) # For sure
+        del self.userList[index]
+
+        for i in range(index, self.userNum):
+            self.userPageGridLayout.removeWidget(self.userList[i].UserBox)
+            self.userPageGridLayout.addWidget(self.userList[i].UserBox, i // 2, i % 2, 1, 1)
+
+        if self.userNum < self.maxUserNum:
+            self.addUserButton.setEnabled(True)
+
 
     @checkArrowStatus
     def randomTeamButtonClick(self, *args):
@@ -250,60 +361,58 @@ class UI_Window(object):
 
         for member in ATeam:
             tmp = TeamUserBox(self.ATeamMember)
-            tmp.pushButton.setText(member)
+            tmp.pushButton.setText(member.name)
             tmp.MMRLabel.setText("")
             self.ATeamMemberVerticalLayout.addWidget(tmp)
 
         for member in BTeam:
             tmp = TeamUserBox(self.BTeamMember)
-            tmp.pushButton.setText(member)
+            tmp.pushButton.setText(member.name)
             tmp.MMRLabel.setText("")
             self.BTeamMemberVerticalLayout.addWidget(tmp)
 
         self.rightArrowClick()
 
+    # @checkArrowStatus
     def getMMR(self):
-        req =  requests.get("http://www.lolskill.net/summoner/KR/WindBag")
+        self.teamType = 'MMR'
 
-        html = req.text
+        for i in reversed(range(self.ATeamMemberVerticalLayout.count())):
+            self.ATeamMemberVerticalLayout.itemAt(i).widget().setParent(None)
 
-        soup = BeautifulSoup(html, 'html.parser')
-        tiers = soup.select('.champion-skillscore')
+        for i in reversed(range(self.BTeamMemberVerticalLayout.count())):
+            self.BTeamMemberVerticalLayout.itemAt(i).widget().setParent(None)
 
-        print(tiers)
+        threads = []
 
-    def addUserClick(self):
-        self.dialog = QtWidgets.QDialog()
-        tmp = UI_Dialog()
-        tmp.setupUI(self.dialog)
-        self.dialog.exec()
+        for i in range(len(self.userList)):
+            threads.append(SeleniumThread(self.userList[i]))
+            threads[i].start()
 
-        if self.dialog.result() == QtWidgets.QDialog.Accepted:
-            tmp = UserBox()
-            tmp.setUserName(self.dialog.userName)
-            self.userPageGridLayout.addWidget(tmp, self.userNum // 2, self.userNum % 2, 1, 1)
-            self.userList.append(self.dialog.userName)
-            self.userNum += 1
+        while True:
+            if all(map(lambda item: not item.is_alive(), threads)):
+                break
+            sleep(10)
 
-    def addUser(self, name):
-        tmp = UserBox()
-        tmp.setUserName(name)
-        self.userPageGridLayout.addWidget(tmp, self.userNum // 2, self.userNum % 2, 1, 1)
-        self.userList.append(name)
-        self.userNum += 1
+        for i in self.userList:
+            print(i.name, ":", i.MMR)
 
-    def sendParsing(self):
-        text = self.lineEdit.text().strip()
+        mmrSum = sum(map(lambda item : item.MMR, self.userList)) / 2
 
-        self.scrollAreaWidgetContent.setText(text)
+        lst = list(combinations(self.userList, 5))
 
-        val = text.split("\n")
+        val = []
 
-        p = compile("{}님이 방에 참가했습니다.")
+        for combination in lst:
+            val.append(abs(mmrSum - sum(map(lambda item : item.MMR, combination))))
 
-        for line in val:
-            result = p.parse(line)
-            self.addUser(result[0])
+        asdf = min(val)
+
+        index = val.index(asdf)
+
+        print(index, asdf)
+
+        self.rightArrowClick()
 
     def setupUI(self, window):
         self.window = window
@@ -398,6 +507,7 @@ class UI_Window(object):
                 "}")
         self.variableMenu.setObjectName("variableMenu")
 
+
         # Upper FirstMenu        
         self.firstMenu = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
@@ -415,38 +525,58 @@ class UI_Window(object):
 
         # Upper SecondMenu
         self.secondMenu = QtWidgets.QWidget()
-        self.secondMenu.setObjectName("secondMenu")
+
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout(self.secondMenu)
+
         self.horizontalLayout_5.setContentsMargins(0, -1, 0, -1)
         self.horizontalLayout_5.setObjectName("horizontalLayout_5")
+
         self.addUserButton = QtWidgets.QToolButton(self.secondMenu)
+
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.addUserButton.sizePolicy().hasHeightForWidth())
+
         self.addUserButton.setSizePolicy(sizePolicy)
+
         self.addUserButton.setMinimumSize(QtCore.QSize(60, 60))
+
         font = QtGui.QFont()
         font.setPointSize(8)
+
         self.addUserButton.setFont(font)
+
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap(".\\addButton.webp"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
         self.addUserButton.setIcon(icon2)
+
         self.addUserButton.setIconSize(QtCore.QSize(32, 32))
+
         self.addUserButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
+
+        self.addUserButton.setText("인원추가")
+
         self.addUserButton.setObjectName("addUserButton")
+
         self.addUserButton.clicked.connect(self.addUserClick)
 
         self.horizontalLayout_5.addWidget(self.addUserButton)
 
 
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+
         self.horizontalLayout_5.addItem(spacerItem1)
+
+
         self.line_2 = QtWidgets.QFrame(self.secondMenu)
         self.line_2.setFrameShape(QtWidgets.QFrame.VLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
         self.horizontalLayout_5.addWidget(self.line_2)
+
+
         self.mmrBalancingButton = QtWidgets.QToolButton(self.secondMenu)
         self.mmrBalancingButton.clicked.connect(self.getMMR)
         self.mmrBalancingButton.setMinimumSize(QtCore.QSize(60, 60))
@@ -459,7 +589,10 @@ class UI_Window(object):
         self.mmrBalancingButton.setIconSize(QtCore.QSize(32, 32))
         self.mmrBalancingButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.mmrBalancingButton.setObjectName("mmrBalancingButton")
+        self.mmrBalancingButton.setText("MMR밸런싱")
         self.horizontalLayout_5.addWidget(self.mmrBalancingButton)
+
+
         self.randomTeamButton = QtWidgets.QToolButton(self.secondMenu)
         self.randomTeamButton.clicked.connect(self.randomTeamButtonClick)
         self.randomTeamButton.setMinimumSize(QtCore.QSize(60, 60))
@@ -472,9 +605,6 @@ class UI_Window(object):
         self.randomTeamButton.setIconSize(QtCore.QSize(32, 32))
         self.randomTeamButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.randomTeamButton.setObjectName("randomTeamButton")
-
-        self.addUserButton.setText("인원추가")
-        self.mmrBalancingButton.setText("MMR밸런싱")
         self.randomTeamButton.setText("랜덤팀구성")
 
         self.horizontalLayout_5.addWidget(self.randomTeamButton)
