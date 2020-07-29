@@ -11,16 +11,15 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from parse import compile
 from random import shuffle
 
-from selenium import webdriver
-
 import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
 
 import threading
 
 from time import sleep
 
 from itertools import combinations
+from operator import itemgetter
 
 text = '''
 WindBag님이 방에 참가했습니다.
@@ -35,6 +34,21 @@ DWG ShowMaker님이 방에 참가했습니다.
 Hide on bush님이 방에 참가했습니다.
 '''.strip()
 
+# text = '''
+# YouCanMake_IT.님이 방에 참가했습니다.
+# Coke_Love님이 방에 참가했습니다.
+# SuperVingo님이 방에 참가했습니다.
+# IU_BBA님이 방에 참가했습니다.
+# I_Love_Winter님이 방에 참가했습니다.
+# Sprite_Love님이 방에 참가했습니다.
+# YunJae.님이 방에 참가했습니다.
+# NHARU님이 방에 참가했습니다.
+# RangIhusband님이 방에 참가했습니다.
+# KOR_Utopia님이 방에 참가했습니다.
+# Co_cu.EX님이 방에 참가했습니다.
+# Grr...o__o님이 방에 참가했습니다.
+# '''.strip()
+
 class SeleniumThread(threading.Thread):
     def __init__(self, user):
         threading.Thread.__init__(self)
@@ -43,7 +57,8 @@ class SeleniumThread(threading.Thread):
 
     def run(self):
         option = webdriver.chrome.options.Options()
-        driver = webdriver.Chrome("D:/Desktop/HanPy/PyQtMMRBalancer/driver/chromedriver.exe")
+        option.headless = True
+        driver = webdriver.Chrome("D:/Desktop/HanPy/PyQtMMRBalancer/driver/chromedriver.exe", options=option)
 
         for i in range(10):
             driver.get("http://www.lolskill.net/summoner/KR/" + self.user.name)
@@ -59,6 +74,33 @@ class SeleniumThread(threading.Thread):
 
         driver.close()
 
+class SoupThread(threading.Thread):
+    def __init__(self, user):
+        threading.Thread.__init__(self)
+
+        self.user = user
+
+    def run(self):
+        option = webdriver.chrome.options.Options()
+        driver = webdriver.Chrome("D:/Desktop/HanPy/PyQtMMRBalancer/driver/chromedriver.exe", options=option)
+
+        for i in range(10):
+            driver.get("https://r6.op.gg/")
+
+            input_form = driver.find_element_by_id("searchUser")
+            input_form.send_keys(self.user.name)
+            input_form.submit()
+
+            vals = driver.find_elements_by_class_name("season-mmr-value")
+
+            if not vals:
+                sleep(10)
+            else:
+                print(int(vals[0].text.replace(',', '').split(' ')[0]))
+                self.user.MMR = int(vals[0].text.replace(',', '').split(' ')[0])
+                break
+
+        driver.close()
 
 class UI_Dialog(object):
     def setupUI(self, Dialog):
@@ -228,6 +270,8 @@ class UI_Window(object):
 
         self.maxUserNum = 12
 
+        self.balanceNiddle = 0
+
     def initSetting(self):
         self.leftButton.setDisabled(True)
         self.rightButton.setDisabled(True)
@@ -281,6 +325,11 @@ class UI_Window(object):
             self.maxUserNum = 10
         else:
             self.maxUserNum = 12
+
+        if self.userNum < self.maxUserNum:
+            self.addUserButton.setEnabled(True)
+        else:
+            self.addUserButton.setDisabled(True)
 
         self.status += 1
         self.variableMenu.setCurrentIndex(1)
@@ -373,46 +422,113 @@ class UI_Window(object):
 
         self.rightArrowClick()
 
-    # @checkArrowStatus
-    def getMMR(self):
-        self.teamType = 'MMR'
+    @checkArrowStatus
+    def getMMR(self, *args):
+        if (self.gameType == "League of Legends" and self.userNum == 10) or (self.gameType == "Siege" and self.userNum == 12):
+            self.teamType = 'MMR'
 
+            # Cleaning 3rd Page
+            for i in reversed(range(self.ATeamMemberVerticalLayout.count())):
+                self.ATeamMemberVerticalLayout.itemAt(i).widget().setParent(None)
+
+            for i in reversed(range(self.BTeamMemberVerticalLayout.count())):
+                self.BTeamMemberVerticalLayout.itemAt(i).widget().setParent(None)
+
+            # Run threads
+            threads = []
+
+            for i in range(len(self.userList)):
+                threads.append(SeleniumThread(self.userList[i])) if self.gameType == "League of Legends" else threads.append(SoupThread(self.userList[i]))
+                threads[i].start()
+
+            # Wait for all threads done
+            while True:
+                if all(map(lambda item: not item.is_alive(), threads)):
+                    break
+                sleep(10)
+
+            for i in self.userList:
+                print(i.name, ":", i.MMR)
+
+            # Get minimum sum
+            mmrSum = sum(map(lambda item : item.MMR, self.userList)) / 2
+
+            lst = list(combinations(self.userList, self.userNum // 2))
+
+            val = []
+
+            for combination in lst:
+                val.append(mmrSum - sum(map(lambda item : item.MMR, combination)))
+
+            val = list(zip(lst, val))
+
+            self.val = sorted(val, key=itemgetter(1))
+
+            # Find 0-Closest index
+            minimum = 50000
+
+            for i, item in enumerate(self.val):
+                if abs(item[1]) < minimum:
+                    minimum = abs(item[1])
+                    self.balanceNiddle = i
+
+            # Divide team
+            ATeam, BTeam = list(self.val[self.balanceNiddle][0]), list(user for user in self.userList if user not in self.val[self.balanceNiddle][0])
+
+            self.ATeamMMR.setText("추정 전력 : " + str(sum(map(lambda item: item.MMR, ATeam))))
+            self.BTeamMMR.setText("추정 전력 : " + str(sum(map(lambda item: item.MMR, BTeam))))
+
+            for member in ATeam:
+                tmp = TeamUserBox(self.ATeamMember)
+                tmp.pushButton.setText(member.name)
+                tmp.MMRLabel.setText(str(member.MMR))
+                self.ATeamMemberVerticalLayout.addWidget(tmp)
+
+            for member in BTeam:
+                tmp = TeamUserBox(self.BTeamMember)
+                tmp.pushButton.setText(member.name)
+                tmp.MMRLabel.setText(str(member.MMR))
+                self.BTeamMemberVerticalLayout.addWidget(tmp)
+
+            self.rightArrowClick()
+
+    @checkArrowStatus
+    def teamUpgradeClick(self, *args):
+        # Cleaning 3rd Page
         for i in reversed(range(self.ATeamMemberVerticalLayout.count())):
             self.ATeamMemberVerticalLayout.itemAt(i).widget().setParent(None)
 
         for i in reversed(range(self.BTeamMemberVerticalLayout.count())):
             self.BTeamMemberVerticalLayout.itemAt(i).widget().setParent(None)
 
-        threads = []
+        if args[0] == "A":
+            self.balanceNiddle -= 1
+        elif args[0] == "B":
+            self.balanceNiddle += 1
 
-        for i in range(len(self.userList)):
-            threads.append(SeleniumThread(self.userList[i]))
-            threads[i].start()
+        self.balanceNiddle = min(max(0, self.balanceNiddle), len(self.val))
 
-        while True:
-            if all(map(lambda item: not item.is_alive(), threads)):
-                break
-            sleep(10)
+        ATeam, BTeam = list(self.val[self.balanceNiddle][0]), list(user for user in self.userList if user not in self.val[self.balanceNiddle][0])
 
-        for i in self.userList:
-            print(i.name, ":", i.MMR)
+        self.ATeamMMR.setText("추정 전력 : " + str(sum(map(lambda item : item.MMR, ATeam))))
+        self.BTeamMMR.setText("추정 전력 : " + str(sum(map(lambda item : item.MMR, BTeam))))
 
-        mmrSum = sum(map(lambda item : item.MMR, self.userList)) / 2
+        for member in ATeam:
+            tmp = TeamUserBox(self.ATeamMember)
+            tmp.pushButton.setText(member.name)
+            tmp.MMRLabel.setText(str(member.MMR))
+            self.ATeamMemberVerticalLayout.addWidget(tmp)
 
-        lst = list(combinations(self.userList, 5))
+        for member in BTeam:
+            tmp = TeamUserBox(self.BTeamMember)
+            tmp.pushButton.setText(member.name)
+            tmp.MMRLabel.setText(str(member.MMR))
+            self.BTeamMemberVerticalLayout.addWidget(tmp)
 
-        val = []
-
-        for combination in lst:
-            val.append(abs(mmrSum - sum(map(lambda item : item.MMR, combination))))
-
-        asdf = min(val)
-
-        index = val.index(asdf)
-
-        print(index, asdf)
-
-        self.rightArrowClick()
+    def getClipboard(self):
+        screen = QtWidgets.QApplication.primaryScreen()
+        screenShot = screen.grabWindow(self.windowWidget.winId())
+        QtWidgets.QApplication.clipboard().setPixmap(screenShot)
 
     def setupUI(self, window):
         self.window = window
@@ -627,34 +743,35 @@ class UI_Window(object):
         self.line_3.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_3.setObjectName("line_3")
         self.hboxlayout.addWidget(self.line_3)
-        self.clipboradButton = QtWidgets.QToolButton(self.thirdMenu)
-        self.clipboradButton.setMinimumSize(QtCore.QSize(60, 60))
+        self.clipboardButton = QtWidgets.QToolButton(self.thirdMenu)
+        self.clipboardButton.setMinimumSize(QtCore.QSize(60, 60))
         font = QtGui.QFont()
         font.setPointSize(8)
-        self.clipboradButton.setFont(font)
+        self.clipboardButton.setFont(font)
         icon5 = QtGui.QIcon()
         icon5.addPixmap(QtGui.QPixmap(".\\clipboard.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.clipboradButton.setIcon(icon5)
-        self.clipboradButton.setIconSize(QtCore.QSize(32, 32))
-        self.clipboradButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
-        self.clipboradButton.setObjectName("clipboradButton")
-        self.hboxlayout.addWidget(self.clipboradButton)
-        self.randomTeamButton2 = QtWidgets.QToolButton(self.thirdMenu)
-        self.randomTeamButton2.clicked.connect(self.randomTeamButtonClick)
-        self.randomTeamButton2.setMinimumSize(QtCore.QSize(60, 60))
-        font = QtGui.QFont()
-        font.setPointSize(8)
-        self.randomTeamButton2.setFont(font)
-        self.randomTeamButton2.setIcon(icon4)
-        self.randomTeamButton2.setIconSize(QtCore.QSize(32, 32))
-        self.randomTeamButton2.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
-        self.randomTeamButton2.setObjectName("randomTeamButton2")
-        self.hboxlayout.addWidget(self.randomTeamButton2)
-        self.clipboradButton.raise_()
+        self.clipboardButton.setIcon(icon5)
+        self.clipboardButton.setIconSize(QtCore.QSize(32, 32))
+        self.clipboardButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
+        self.clipboardButton.setObjectName("clipboardButton")
+        self.clipboardButton.clicked.connect(self.getClipboard)
+        self.hboxlayout.addWidget(self.clipboardButton)
+        # self.randomTeamButton2 = QtWidgets.QToolButton(self.thirdMenu)
+        # self.randomTeamButton2.clicked.connect(self.randomTeamButtonClick)
+        # self.randomTeamButton2.setMinimumSize(QtCore.QSize(60, 60))
+        # font = QtGui.QFont()
+        # font.setPointSize(8)
+        # self.randomTeamButton2.setFont(font)
+        # self.randomTeamButton2.setIcon(icon4)
+        # self.randomTeamButton2.setIconSize(QtCore.QSize(32, 32))
+        # self.randomTeamButton2.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
+        # self.randomTeamButton2.setObjectName("randomTeamButton2")
+        # self.hboxlayout.addWidget(self.randomTeamButton2)
+        self.clipboardButton.raise_()
         self.line_3.raise_()
-        self.randomTeamButton2.raise_()
-        self.clipboradButton.setText("클립보드복사")
-        self.randomTeamButton2.setText("랜덤팀구성")
+        # self.randomTeamButton2.raise_()
+        self.clipboardButton.setText("클립보드복사")
+        # self.randomTeamButton2.setText("랜덤팀구성")
         self.variableMenu.addWidget(self.thirdMenu)
         self.horizontalLayout_2.addWidget(self.variableMenu)
         self.verticalLayout.addWidget(self.fixedMenu)
@@ -876,6 +993,7 @@ class UI_Window(object):
         self.ATeamUpgradeButton.setCheckable(False)
         self.ATeamUpgradeButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.ATeamUpgradeButton.setObjectName("toolButton_21")
+        self.ATeamUpgradeButton.clicked.connect(lambda : self.teamUpgradeClick("A"))
         self.ATeamTitleHorizontalLayout.addWidget(self.ATeamUpgradeButton)
 
         ATeamTitleSpacer = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -960,6 +1078,7 @@ class UI_Window(object):
         self.BTeamUpgradeButton.setIconSize(QtCore.QSize(40, 40))
         self.BTeamUpgradeButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.BTeamUpgradeButton.setObjectName("toolButton_32")
+        self.BTeamUpgradeButton.clicked.connect(lambda: self.teamUpgradeClick("B"))
         self.BTeamTitleHorizontalLayout.addWidget(self.BTeamUpgradeButton)
 
         BTeamTitleSpacer = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
